@@ -11,6 +11,7 @@ import java.util.Collection;
  * Created by Kaempe on 21-03-2017.
  */
 public class RecipeRepositoryTest {
+    /*
     public final static String DB_URL = "jdbc:mysql://80.255.6.114:3306/AirshipOne";
     public final static String DB_USER = "AirshipOneUser";
     public final static String DB_PASS = "123456";
@@ -77,4 +78,5 @@ public class RecipeRepositoryTest {
         Assert.assertEquals(recipe.getRecipeName(), "Nasty Recipe");
         Assert.assertEquals(recipe.getRecipeType().getRecipeTypeName(), "Brunch");
     }
+    */
 }

@@ -43,6 +43,9 @@ public class RecipeRepository implements IRecipeRepository {
 
     @Override
     public Recipe get(int id) {
+        if (!this.exists(id)){
+            throw new IllegalArgumentException("No recipe found with id " + id);
+        }
         Recipe recipe;
         String sql =
                 "SELECT recipeId, recipeName, recipeDescription, recipeImageFilePath " +
@@ -67,24 +70,17 @@ public class RecipeRepository implements IRecipeRepository {
         int id;
         this.failIfInvalid(model);
         String sql =
-                "INSERT INTO Recipes (recipeName, recipeDescription, recipeImageFilePath) " +
-                        "VALUES (:recipeName, :recipeDescription, :recipeImageFilePath)";
-        String sqlRecipeType =
-                "INSERT INTO Recipes (recipeTypeId) " +
-                        "VALUES (:recipeTypeId) " +
-                        "WHERE recipeId = :id";
-
+                "INSERT INTO Recipes (recipeName, recipeDescription, recipeImageFilePath, recipeTypeId) " +
+                        "VALUES (:recipeName, :recipeDescription, :recipeImageFilePath, :recipeTypeId)";
         String sqlRelations =
                 "INSERT INTO MeasuredIngredients (recipeId, ingredientId, amount, measure) " +
-                        "VALUES (:recipeId, :ingredientId, :amount, :measure )";
+                        "VALUES (:recipeId, :ingredientId, :amount, :measure)";
         try{
             Connection con = sql2o.beginTransaction();
             id = Integer.parseInt(con.createQuery(sql, true)
                     .bind(model)
+                    .addParameter("recipeTypeId",model.getRecipeType().getRecipeTypeId())
                     .executeUpdate().getKey().toString());
-            con.createQuery(sqlRecipeType)
-                    .addParameter("id",id)
-                    .executeUpdate();
             model.getMeasuredIngredients().forEach(ingredient ->
                     con.createQuery(sqlRelations)
                             .addParameter("recipeId",id)
@@ -109,19 +105,104 @@ public class RecipeRepository implements IRecipeRepository {
         }
         failIfInvalid(model);
 
+        String sql =
+                "UPDATE Recipes SET " +
+                        "recipeName = :recipeName, " +
+                        "recipeDescription = :recipeDescription, " +
+                        "recipeImageFilePath = :recipeImageFilePath " +
+                        "WHERE recipeId = :recipeId";
+        String sqlRecipeType =
+                "UPDATE Recipes SET " +
+                        "recipeTypeId = :recipeTypeId " +
+                        "WHERE recipeId = :id";
 
+        String sqlRelationsToDelete =
+                "DELETE FROM MeasuredIngredients WHERE " +
+                        "recipeId = :id";
 
-        return false;
+        String sqlRelationsToUpdate =
+                "INSERT INTO MeasuredIngredients (recipeId, ingredientId, amount, measure) " +
+                        "VALUES (:recipeId, :ingredientId, :amount, :measure )";
+
+        try{
+            Connection con = sql2o.beginTransaction();
+            con.createQuery(sql)
+                    .bind(model)
+                    .addParameter("recipeId",model.getRecipeId())
+                    .executeUpdate();
+            con.createQuery(sqlRecipeType)
+                    .addParameter("recipeTypeId",model.getRecipeType().getRecipeTypeId())
+                    .addParameter("id",model.getRecipeId())
+                    .executeUpdate();
+            con.createQuery(sqlRelationsToDelete)
+                    .addParameter("id",model.getRecipeId())
+                    .executeUpdate();
+            model.getMeasuredIngredients().forEach(ingredient ->
+                    con.createQuery(sqlRelationsToUpdate)
+                            .addParameter("recipeId",model.getRecipeId())
+                            .addParameter("ingredientId",ingredient.getIngredient().getIngredientId())
+                            .addParameter("amount",ingredient.getAmount())
+                            .addParameter("measure",ingredient.getMeasure())
+                            .executeUpdate());
+            con.commit();
+            return true;
+        }catch (Exception e)
+        {
+            e.printStackTrace();
+            return false;
+        }
     }
 
     @Override
     public boolean delete(int id) {
-        return false;
+        if (!this.exists(id)){
+            throw new IllegalArgumentException("No Recipe found with id: " + id);
+        }
+        //failDeleteIfRelationsExist(id); // TODO create method when menus are introduced
+        Connection con;
+        String sqlRelationsToDelete =
+                "DELETE FROM MeasuredIngredients WHERE " +
+                        "recipeId = :id";
+
+        String sql =
+                "DELETE FROM Recipes WHERE " +
+                        "recipeId = :id ";
+        try{
+            con = sql2o.beginTransaction();
+            con.createQuery(sqlRelationsToDelete)
+                    .addParameter("id",id)
+                    .executeUpdate();
+            con.createQuery(sql)
+                    .addParameter("id",id)
+                    .executeUpdate();
+            con.commit();
+            return true;
+        }catch (Exception e)
+        {
+            e.printStackTrace();
+            return false;
+        }
     }
 
     @Override
     public boolean exists(int id) {
-        return false;
+        Recipe recipe;
+
+        String sql = "SELECT recipeId " +
+                "FROM Recipes " +
+                "WHERE recipeId = :id";
+        try{
+            Connection con = sql2o.open();
+            recipe = con.createQuery(sql)
+                    .addParameter("id",id)
+                    .executeAndFetchFirst(Recipe.class);
+            if (recipe != null) return true;
+            return false;
+        }catch (Exception e)
+        {
+            e.printStackTrace();
+            return false;
+        }
     }
 
     private RecipeType getRecipeTypeFor(int recipeId){
@@ -150,7 +231,7 @@ public class RecipeRepository implements IRecipeRepository {
         Collection<MeasuredIngredient> ingredients;
         String sql =
                 "SELECT measuredIngredientId, amount, measure FROM MeasuredIngredients " +
-                        "WHERE ingredientId = :id";
+                        "WHERE recipeId = :id";
         try{
             Connection con = sql2o.open();
             ingredients = con.createQuery(sql)
@@ -215,14 +296,6 @@ public class RecipeRepository implements IRecipeRepository {
             }
             if (measuredIngredient.getIngredient().getIngredientId() == 0){
                 throw new IllegalArgumentException("Parameter `ingredient` has wrong id");
-            }
-            if (measuredIngredient.getIngredient().getIngredientName() == null ||
-                    measuredIngredient.getIngredient().getIngredientName().length() < 1){
-                throw new IllegalArgumentException("Parameter `ingredient`.`name` has wrong id");
-            }
-            if (measuredIngredient.getIngredient().getIngredientDescription() == null ||
-                    measuredIngredient.getIngredient().getIngredientDescription().length() < 1){
-                throw new IllegalArgumentException("Parameter `ingredient`.`description` has wrong id");
             }
         }
     }

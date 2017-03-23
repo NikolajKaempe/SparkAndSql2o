@@ -5,6 +5,8 @@ repositories\AllergyRepository.class
 repositories\repositoryInterfaces\IRepository.class
 controllers\MealTypeController.class
 repositories\RecipeRepository.class
+controllers\RecipeController.class
+models\wrapper_models\Recipes.class
 repositories\repositoryInterfaces\IRecipeRepository.class
 models\Ingredient.class
 controllers\RecipeTypeController.class

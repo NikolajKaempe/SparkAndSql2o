@@ -1,8 +1,5 @@
-import controllers.IngredientController;
-import controllers.MealTypeController;
-import controllers.RecipeTypeController;
+import controllers.*;
 import org.sql2o.Sql2o;
-import controllers.AllergyController;
 import repositories.IngredientRepository;
 import repositories.RecipeRepository;
 
@@ -21,7 +18,7 @@ public class Main{
         new IngredientController(sql2o);
         new RecipeTypeController(sql2o);
         new MealTypeController(sql2o);
-        new RecipeRepository(sql2o);
+        new RecipeController(sql2o);
     }
 }
 
