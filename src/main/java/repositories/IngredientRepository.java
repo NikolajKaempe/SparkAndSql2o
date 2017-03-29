@@ -33,7 +33,7 @@ public class IngredientRepository implements IIngredientRepository
         }catch (Exception e)
         {
             e.printStackTrace();
-            return null;
+            return new ArrayList<>();
         }
         return ingredients;
     }
@@ -184,7 +184,36 @@ public class IngredientRepository implements IIngredientRepository
         }
     }
 
-    private Collection<Allergy> getAllergiesFor(int id)
+    @Override
+    public void failIfInvalid(Ingredient ingredient)
+    {
+        if (ingredient == null)
+        {
+            throw new IllegalArgumentException("Ingredient cannot be null");
+        }
+        if (ingredient.getIngredientName() == null || ingredient.getIngredientDescription().length() < 1) {
+            throw new IllegalArgumentException("Parameter `name` cannot be empty");
+        }
+        if (ingredient.getIngredientDescription() == null || ingredient.getIngredientDescription().length() < 1) {
+            throw new IllegalArgumentException("Parameter `description` cannot be empty");
+        }
+        if(ingredient.getAllergies() == null){
+            throw new IllegalArgumentException("An ingredient must contain Allergies");
+        }
+
+        if (ingredient.getAllergies().size() < 1)
+        {
+            throw new IllegalArgumentException("An ingredient must contain at least one Allergy");
+        }
+        for (Allergy allergy : ingredient.getAllergies()) {
+            if (!this.isRelationValid(allergy.getAllergyId())){
+                throw new IllegalArgumentException("allergy with id " + allergy.getAllergyId() + " dos'ent exist");
+            }
+        }
+    }
+
+    @Override
+    public Collection<Allergy> getAllergiesFor(int id)
     {
         Collection<Allergy> allergies;
         String sql =
@@ -200,36 +229,33 @@ public class IngredientRepository implements IIngredientRepository
                     .executeAndFetch(Allergy.class);
         }catch (Exception e)
         {
-            e.printStackTrace();
-            return null;
+            throw new IllegalArgumentException("No allergies found for ingredient with id "+ id);
         }
+
         return allergies;
     }
 
-    private void failIfInvalid(Ingredient ingredient)
-    {
-        if (ingredient == null)
+    @Override
+    public boolean isRelationValid(int relationId){
+        int id;
+        String sql =
+                "SELECT allergyId FROM Allergies " +
+                        "WHERE allergyId = :id";
+        try{
+            Connection con = sql2o.open();
+            id = con.createQuery(sql)
+                    .addParameter("id",relationId)
+                    .executeAndFetchFirst(Integer.class);
+            if (id > 0) return true;
+            return false;
+        }catch (Exception e)
         {
-            throw new IllegalArgumentException("Ingredient cannot be null");
-        }
-        if (ingredient.getIngredientName() == null || ingredient.getIngredientDescription().length() < 1) {
-            throw new IllegalArgumentException("Parameter `name` cannot be empty");
-        }
-        if (ingredient.getIngredientDescription() == null || ingredient.getIngredientDescription().length() < 1) {
-            throw new IllegalArgumentException("Parameter `description` cannot be empty");
-        }
-        if (ingredient.getAllergies().size() < 1)
-        {
-            throw new IllegalArgumentException("An ingredient must contain at least one Allergy");
-        }
-        for (Allergy allergy : ingredient.getAllergies()) {
-            if (allergy.getAllergyId() == 0){
-                throw new IllegalArgumentException("Ingredient contains an invalid allergy");
-            }
+            return false;
         }
     }
 
-    private void failDeleteIfRelationsExist(int id)
+    @Override
+    public void failDeleteIfRelationsExist(int id)
     {
         Collection<Integer> relations;
         String sql = "SELECT ingredientId " +

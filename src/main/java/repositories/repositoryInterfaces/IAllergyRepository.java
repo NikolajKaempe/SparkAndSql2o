@@ -10,4 +10,5 @@ import java.util.List;
 public interface IAllergyRepository extends IRepository<Allergy>
 {
 
+    void failDeleteIfRelationsExist(int id);
 }

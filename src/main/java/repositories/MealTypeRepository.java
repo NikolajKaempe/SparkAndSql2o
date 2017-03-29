@@ -5,6 +5,7 @@ import org.sql2o.Connection;
 import org.sql2o.Sql2o;
 import repositories.repositoryInterfaces.IMealTypeRepository;
 
+import java.util.ArrayList;
 import java.util.Collection;
 
 /**
@@ -28,7 +29,7 @@ public class MealTypeRepository implements IMealTypeRepository
         }catch (Exception e)
         {
             e.printStackTrace();
-            return null;
+            return new ArrayList<>();
         }
         return mealTypes;
     }
@@ -145,7 +146,8 @@ public class MealTypeRepository implements IMealTypeRepository
         }
     }
 
-    private void failIfInvalid(MealType mealType)
+    @Override
+    public void failIfInvalid(MealType mealType)
     {
         if (mealType == null)
         {
@@ -156,7 +158,8 @@ public class MealTypeRepository implements IMealTypeRepository
         }
     }
 
-    private void failDeleteIfRelationsExist(int id)
+    @Override
+    public void failDeleteIfRelationsExist(int id)
     {
         Collection<Integer> relations;
         String sql = "SELECT mealTypeId " +

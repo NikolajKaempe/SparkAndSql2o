@@ -5,13 +5,13 @@ import models.Recipe;
 import java.util.Collection;
 
 /**
- * Created by Kaempe on 22-03-2017.
+ * Created by Kaempe on 27-03-2017.
  */
 public class Recipes
 {
     private Collection<Recipe> recipes;
 
-    public  Recipes(Collection<Recipe> recipes){
+    public Recipes(Collection<Recipe> recipes){
         this.recipes = recipes;
     }
 

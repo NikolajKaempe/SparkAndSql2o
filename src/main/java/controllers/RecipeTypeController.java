@@ -109,6 +109,11 @@ public class RecipeTypeController
             return new String("Could not delete recipeType with id " + id);
         },json());
 
+        before((req,res) -> {
+            //TODO GET VERIFICATION FOR ADMIN/PUBLISHER
+            res.header("MyVal", "Hello World"); // Dummy -> REMOVE
+        });
+
         after((req, res) -> res.type("application/json"));
 
         exception(IllegalArgumentException.class, (e, req, res) -> {

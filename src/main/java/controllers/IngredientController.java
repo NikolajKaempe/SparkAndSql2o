@@ -1,6 +1,8 @@
 package controllers;
 
+import models.Allergy;
 import models.Ingredient;
+import models.wrapper_models.Allergies;
 import models.wrapper_models.Ingredients;
 import org.sql2o.Sql2o;
 import repositories.IngredientRepository;
@@ -28,7 +30,7 @@ public class IngredientController
         {
             Collection<Ingredient> ingredients = ingredientRepository.getAll();
 
-            if (ingredients != null){
+            if (ingredients.size() > 0){
                 res.status(200);
                 return  new Ingredients(ingredients);
             }
@@ -53,6 +55,26 @@ public class IngredientController
             }
             res.status(204);
             return new String("No ingredient with id "+ id +" found");
+        }, json());
+
+        get("/ingredients/:id/allergies", (req, res) -> {
+            int id ;
+            try{
+                id = Integer.parseInt(req.params(":id"));
+            }catch (Exception e)
+            {
+                res.status(400);
+                return new String("the id must be an integer");
+            }
+
+            Collection<Allergy> allergies = ingredientRepository.getAllergiesFor(id);
+
+            if (allergies.size() > 0) {
+                res.status(200);
+                return new Allergies(allergies);
+            }
+            res.status(204);
+            return new String("No allergies found for ingredient with id "+ id);
         }, json());
 
         post("/ingredients", (req, res) -> {
@@ -109,6 +131,11 @@ public class IngredientController
             res.status(500);
             return new String("Could not delete ingredient with id " + id);
         },json());
+
+        before((req,res) -> {
+            //TODO GET VERIFICATION FOR ADMIN/PUBLISHER
+            res.header("MyVal", "Hello World"); // Dummy -> REMOVE
+        });
 
         after((req, res) -> res.type("application/json"));
 

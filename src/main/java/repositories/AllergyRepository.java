@@ -5,6 +5,7 @@ import org.sql2o.Connection;
 import org.sql2o.Sql2o;
 import repositories.repositoryInterfaces.IAllergyRepository;
 
+import java.util.ArrayList;
 import java.util.Collection;
 
 public class AllergyRepository implements IAllergyRepository
@@ -29,7 +30,7 @@ public class AllergyRepository implements IAllergyRepository
         }catch (Exception e)
         {
             e.printStackTrace();
-            return null;
+            return new ArrayList<>();
         }
         return allergies;
     }
@@ -117,7 +118,7 @@ public class AllergyRepository implements IAllergyRepository
             return true;
         }catch (Exception e)
         {
-            //e.printStackTrace();
+            e.printStackTrace();
             return false;
         }
     }
@@ -132,7 +133,8 @@ public class AllergyRepository implements IAllergyRepository
         return true;
     }
 
-    private void failIfInvalid(Allergy allergy)
+    @Override
+    public void failIfInvalid(Allergy allergy)
     {
         if (allergy == null)
         {
@@ -146,7 +148,8 @@ public class AllergyRepository implements IAllergyRepository
         }
     }
 
-    private void failDeleteIfRelationsExist(int id)
+    @Override
+    public void failDeleteIfRelationsExist(int id)
     {
         Collection<Integer> relations;
         String sql = "SELECT allergyId " +

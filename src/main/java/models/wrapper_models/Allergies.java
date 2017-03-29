@@ -5,14 +5,13 @@ import models.Allergy;
 import java.util.Collection;
 
 /**
- * Created by Kaempe on 22-03-2017.
+ * Created by Kaempe on 27-03-2017.
  */
 public class Allergies
 {
     private Collection<Allergy> allergies;
 
-    public Allergies(Collection<Allergy> allergies)
-    {
+    public Allergies(Collection<Allergy> allergies){
         this.allergies = allergies;
     }
 

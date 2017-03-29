@@ -18,12 +18,16 @@ repositories\repositoryInterfaces\IAllergyRepository.class
 repositories\MealTypeRepository.class
 repositories\repositoryInterfaces\IIngredientRepository.class
 models\wrapper_models\MealTypes.class
+repositories\repositoryInterfaces\IMenuRepository.class
 repositories\RecipeTypeRepository.class
 models\MeasuredIngredient.class
+repositories\MenuRepository.class
 models\MealType.class
+controllers\MenuController.class
 models\Allergy.class
 repositories\repositoryInterfaces\IRecipeTypeRepository.class
 controllers\IngredientController.class
 jsonUtil\JsonUtil.class
+models\Menu.class
 models\wrapper_models\RecipeTypes.class
 models\Recipe.class

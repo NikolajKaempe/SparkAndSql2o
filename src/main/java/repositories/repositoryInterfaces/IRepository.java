@@ -14,4 +14,5 @@ public interface IRepository<T>
     boolean update(T model);
     boolean delete(int id);
     boolean exists(int id);
+    void failIfInvalid(T model);
 }

@@ -1,11 +1,12 @@
 package models.wrapper_models;
 
+import models.Recipe;
 import models.RecipeType;
 
 import java.util.Collection;
 
 /**
- * Created by Kaempe on 22-03-2017.
+ * Created by Kaempe on 27-03-2017.
  */
 public class RecipeTypes
 {

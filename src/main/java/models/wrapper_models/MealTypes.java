@@ -5,7 +5,7 @@ import models.MealType;
 import java.util.Collection;
 
 /**
- * Created by Kaempe on 22-03-2017.
+ * Created by Kaempe on 27-03-2017.
  */
 public class MealTypes
 {

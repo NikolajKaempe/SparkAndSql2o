@@ -8,6 +8,7 @@ import org.sql2o.Connection;
 import org.sql2o.Sql2o;
 import repositories.repositoryInterfaces.IRecipeRepository;
 
+import java.util.ArrayList;
 import java.util.Collection;
 
 /**
@@ -36,7 +37,7 @@ public class RecipeRepository implements IRecipeRepository {
         }catch (Exception e)
         {
             e.printStackTrace();
-            return null;
+            return new ArrayList<>();
         }
         return recipes;
     }
@@ -158,7 +159,7 @@ public class RecipeRepository implements IRecipeRepository {
         if (!this.exists(id)){
             throw new IllegalArgumentException("No Recipe found with id: " + id);
         }
-        //failDeleteIfRelationsExist(id); // TODO create method when menus are introduced
+        failDeleteIfRelationsExist(id); // TODO create method when menus are introduced
         Connection con;
         String sqlRelationsToDelete =
                 "DELETE FROM MeasuredIngredients WHERE " +
@@ -205,69 +206,8 @@ public class RecipeRepository implements IRecipeRepository {
         }
     }
 
-    private RecipeType getRecipeTypeFor(int recipeId){
-        RecipeType recipeType;
-        String sql =
-                "SELECT * FROM RecipeTypes " +
-                        "WHERE recipeTypeId IN (" +
-                "SELECT recipeTypeId FROM Recipes " +
-                        "WHERE recipeTypeId = :id" +
-                        ")";
-        try{
-            Connection con = sql2o.open();
-            recipeType = con.createQuery(sql)
-                    .addParameter("id",recipeId)
-                    .executeAndFetchFirst(RecipeType.class);
-        }catch (Exception e)
-        {
-            e.printStackTrace();
-            return null;
-        }
-
-        return recipeType;
-    }
-
-    private Collection<MeasuredIngredient> getMeasuredIngredientsFor(int recipeId){
-        Collection<MeasuredIngredient> ingredients;
-        String sql =
-                "SELECT measuredIngredientId, amount, measure FROM MeasuredIngredients " +
-                        "WHERE recipeId = :id";
-        try{
-            Connection con = sql2o.open();
-            ingredients = con.createQuery(sql)
-                    .addParameter("id",recipeId)
-                    .executeAndFetch(MeasuredIngredient.class);
-            ingredients.forEach(ingredient -> ingredient.setIngredient(getIngredientFor(recipeId)));
-        }catch (Exception e)
-        {
-            e.printStackTrace();
-            return null;
-        }
-        return ingredients;
-    }
-
-    private Ingredient getIngredientFor(int recipeId){
-        Ingredient ingredient;
-        String sql =
-                "SELECT * FROM Ingredients " +
-                        "WHERE ingredientId IN (" +
-                        "SELECT ingredientId FROM MeasuredIngredients " +
-                        "WHERE recipeId= :id" +
-                        ")";
-        try{
-            Connection con = sql2o.open();
-            ingredient = con.createQuery(sql)
-                    .addParameter("id",recipeId)
-                    .executeAndFetchFirst(Ingredient.class);
-        }catch (Exception e)
-        {
-            e.printStackTrace();
-            return null;
-        }
-        return ingredient;
-    }
-
-    private void failIfInvalid(Recipe recipe){
+    @Override
+public void failIfInvalid(Recipe recipe){
         if ( recipe == null)
         {
             throw new IllegalArgumentException("recipe cannot be null");
@@ -284,6 +224,9 @@ public class RecipeRepository implements IRecipeRepository {
         if (recipe.getRecipeType().getRecipeTypeId() == 0) {
             throw new IllegalArgumentException("Parameter `recipeType` has wrong id");
         }
+        if (recipe.getMeasuredIngredients() == null){
+            throw new IllegalArgumentException("Recipe must have at least 1 ingredient!");
+        }
         for (MeasuredIngredient measuredIngredient : recipe.getMeasuredIngredients()){
             if (measuredIngredient.getAmount() <= 0){
                 throw new IllegalArgumentException("Parameter `measuredIngredient` amount must be greater than 0");
@@ -294,10 +237,113 @@ public class RecipeRepository implements IRecipeRepository {
             if (measuredIngredient.getIngredient() == null){
                 throw new IllegalArgumentException("Parameter `ingredient` cannot be null");
             }
-            if (measuredIngredient.getIngredient().getIngredientId() == 0){
-                throw new IllegalArgumentException("Parameter `ingredient` has wrong id");
+            if(!this.isRelationValid(measuredIngredient.getIngredient().getIngredientId())){
+                throw new IllegalArgumentException("Ingredient with id " +
+                        measuredIngredient.getIngredient().getIngredientId() + " dos'ent exist");
             }
         }
+    }
+
+    @Override
+    public RecipeType getRecipeTypeFor(int id){
+        RecipeType recipeType;
+        String sql =
+                "SELECT * FROM RecipeTypes " +
+                        "WHERE recipeTypeId IN (" +
+                "SELECT recipeTypeId FROM Recipes " +
+                        "WHERE recipeTypeId = :id" +
+                        ")";
+        try{
+            Connection con = sql2o.open();
+            recipeType = con.createQuery(sql)
+                    .addParameter("id",id)
+                    .executeAndFetchFirst(RecipeType.class);
+        }catch (Exception e)
+        {
+            e.printStackTrace();
+            return null;
+        }
+
+        return recipeType;
+    }
+
+    @Override
+    public Collection<MeasuredIngredient> getMeasuredIngredientsFor(int id){
+        Collection<MeasuredIngredient> ingredients;
+        String sql =
+                "SELECT measuredIngredientId, amount, measure FROM MeasuredIngredients " +
+                        "WHERE recipeId = :id";
+        try{
+            Connection con = sql2o.open();
+            ingredients = con.createQuery(sql)
+                    .addParameter("id",id)
+                    .executeAndFetch(MeasuredIngredient.class);
+            ingredients.forEach(ingredient -> ingredient.setIngredient(getIngredientFor(id)));
+        }catch (Exception e)
+        {
+            e.printStackTrace();
+            return null;
+        }
+        return ingredients;
+    }
+
+    @Override
+    public Ingredient getIngredientFor(int id){
+        Ingredient ingredient;
+        String sql =
+                "SELECT * FROM Ingredients " +
+                        "WHERE ingredientId IN (" +
+                        "SELECT ingredientId FROM MeasuredIngredients " +
+                        "WHERE recipeId= :id" +
+                        ")";
+        try{
+            Connection con = sql2o.open();
+            ingredient = con.createQuery(sql)
+                    .addParameter("id",id)
+                    .executeAndFetchFirst(Ingredient.class);
+        }catch (Exception e)
+        {
+            e.printStackTrace();
+            return null;
+        }
+        return ingredient;
+    }
+
+    @Override
+    public boolean isRelationValid(int relationId){
+        int id;
+        String sql =
+                "SELECT ingredientId FROM Ingredients " +
+                        "WHERE ingredientId = :id";
+        try{
+            Connection con = sql2o.open();
+            id = con.createQuery(sql)
+                    .addParameter("id",relationId)
+                    .executeAndFetchFirst(Integer.class);
+            if (id > 0) return true;
+            return false;
+        }catch (Exception e)
+        {
+            return false;
+        }
+    }
+
+    @Override
+    public void failDeleteIfRelationsExist(int id){
+        Collection<Integer> relations;
+        String sql = "SELECT recipeId " +
+                "FROM MenuRecipes " +
+                "WHERE recipeId = :id";
+        try{
+            Connection con = sql2o.open();
+            relations = con.createQuery(sql)
+                    .addParameter("id",id)
+                    .executeAndFetch(Integer.class);
+        }catch (Exception e)
+        {
+            throw new IllegalArgumentException("Recipe not deleted. Problems with menu associations");
+        }
+        if (!relations.isEmpty()) throw new IllegalArgumentException("Recipe not deleted. Used in one or more Menus");
     }
 
 }

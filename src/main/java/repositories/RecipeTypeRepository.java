@@ -32,7 +32,7 @@ public class RecipeTypeRepository implements IRecipeTypeRepository{
         }catch (Exception e)
         {
             e.printStackTrace();
-            return null;
+            return new ArrayList<>();
         }
         return recipeTypes;
     }
@@ -147,7 +147,8 @@ public class RecipeTypeRepository implements IRecipeTypeRepository{
         }
     }
 
-    private void failIfInvalid(RecipeType recipeType)
+    @Override
+    public void failIfInvalid(RecipeType recipeType)
     {
         if (recipeType == null)
         {
@@ -158,7 +159,8 @@ public class RecipeTypeRepository implements IRecipeTypeRepository{
         }
     }
 
-    private void failDeleteIfRelationsExist(int id)
+    @Override
+    public void failDeleteIfRelationsExist(int id)
     {
         Collection<Integer> relations;
         String sql = "SELECT recipeTypeId " +

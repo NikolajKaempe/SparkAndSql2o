@@ -1,7 +1,12 @@
 import controllers.*;
+import jsonUtil.JsonUtil;
+import models.Allergy;
 import org.sql2o.Sql2o;
 import repositories.IngredientRepository;
 import repositories.RecipeRepository;
+
+import java.util.ArrayList;
+import java.util.Collection;
 
 /**
  * Created by Kaempe on 19-02-2017.
@@ -19,6 +24,7 @@ public class Main{
         new RecipeTypeController(sql2o);
         new MealTypeController(sql2o);
         new RecipeController(sql2o);
+        new MenuController(sql2o);
     }
 }
 

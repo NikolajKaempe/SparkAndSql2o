@@ -16,7 +16,6 @@ import static spark.Spark.*;
  */
 public class AllergyController
 {
-
     private IAllergyRepository allergyRepository;
 
     public AllergyController(Sql2o sql2o)
@@ -28,7 +27,7 @@ public class AllergyController
             Collection<Allergy> allergies = allergyRepository.getAll();
             if (allergies.size() != 0){
                 res.status(200);
-                return  new Allergies(allergies);
+                return new Allergies(allergies);
             }
             res.status(204);
             return new String("No allergies found in the database");
@@ -107,6 +106,11 @@ public class AllergyController
             res.status(500);
             return new String("Could not delete allergy with id " + id);
         },json());
+
+        before((req,res) -> {
+            //TODO GET VERIFICATION FOR ADMIN/PUBLISHER
+            res.header("MyVal", "Hello World"); // Dummy -> REMOVE
+        });
 
         after((req, res) -> res.type("application/json"));
 
