@@ -21,7 +21,8 @@ public class MealTypeRepository implements IMealTypeRepository
     public Collection<MealType> getAll() {
         Collection<MealType> mealTypes;
         String sql =
-                "SELECT * FROM MealTypes ";
+                "SELECT mealTypeId, mealTypeName " +
+                    "FROM MealTypes ";
         try{
             Connection con = sql2o.open();
             mealTypes = con.createQuery(sql)
@@ -41,7 +42,7 @@ public class MealTypeRepository implements IMealTypeRepository
         }
 
         MealType mealType;
-        String sql = "SELECT * " +
+        String sql = "SELECT mealTypeId, mealTypeName " +
                 "FROM MealTypes " +
                 "WHERE mealTypeId = :id";
         try{

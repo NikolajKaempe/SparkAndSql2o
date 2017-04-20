@@ -24,7 +24,8 @@ public class RecipeTypeRepository implements IRecipeTypeRepository{
     public Collection<RecipeType> getAll() {
         Collection<RecipeType> recipeTypes;
         String sql =
-                "SELECT * FROM RecipeTypes ";
+                "SELECT recipeTypeId, recipeTypeName " +
+                    "FROM RecipeTypes ";
         try{
             Connection con = sql2o.open();
             recipeTypes = con.createQuery(sql)
@@ -44,9 +45,10 @@ public class RecipeTypeRepository implements IRecipeTypeRepository{
         }
 
         RecipeType recipeType;
-        String sql = "SELECT * " +
-                "FROM RecipeTypes " +
-                "WHERE recipeTypeId = :id";
+        String sql =
+                "SELECT recipeTypeId, recipeTypeName " +
+                    "FROM RecipeTypes " +
+                    "WHERE recipeTypeId = :id";
         try{
             Connection con = sql2o.open();
             recipeType = con.createQuery(sql)

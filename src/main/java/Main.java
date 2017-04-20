@@ -12,10 +12,10 @@ import java.util.Collection;
  * Created by Kaempe on 19-02-2017.
  */
 public class Main{
-    public final static String DB_URL = "mysql://80.255.6.114:3306/AirshipOne";
-    //public final static String DB_URL = "localhost:3306/AirshipOne";
-    public final static String DB_USER = "AirshipOneUser";
-    public final static String DB_PASS = "123456";
+    public final static String DB_URL = "mysql://80.255.6.114:3306/FindFood_Publisher";
+    //public final static String DB_URL = "mysql://localhost:3306/FindFood_Publisher";
+    public final static String DB_USER = "FF_Publisher";
+    public final static String DB_PASS = "yQjS6yiA";
 
     public static void main( String[] args) {
         Sql2o sql2o = new Sql2o(DB_URL, DB_USER, DB_PASS);

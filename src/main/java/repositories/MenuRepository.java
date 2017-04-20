@@ -1,15 +1,13 @@
 package repositories;
 
-import models.MealType;
-import models.Menu;
-import models.Recipe;
-import models.RecipeType;
+import models.*;
 import org.sql2o.Connection;
 import org.sql2o.Sql2o;
 import repositories.repositoryInterfaces.IMenuRepository;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 
 /**
  * Created by Kaempe on 28-03-2017.
@@ -70,13 +68,32 @@ public class MenuRepository implements IMenuRepository{
     public int create(Menu model) {
         int id;
         this.failIfInvalid(model);
+        Collection<Integer> ingredientRelations = new HashSet<>();
+        Collection<Integer> allergyRelations = new HashSet<>();
         String sql =
                 "INSERT INTO Menus (menuName, menuDescription, menuImageFilePath, mealTypeId) " +
                         "VALUES (:menuName, :menuDescription, :menuImageFilePath, :mealTypeId)";
 
-        String sqlRelations =
+        String sqlRecipeRelations =
                 "Insert INTO MenuRecipes (recipeId, menuId) " +
                         "VALUES (:recipeId, :menuId)";
+
+        String sqlGetIngredientRelations =
+                "SELECT ingredientId FROM MeasuredIngredients " +
+                        "WHERE recipeId = :recipeId";
+
+        String sqlIngredientRelationsToUpdate =
+                "INSERT INTO MenuIngredients (ingredientId, menuId) " +
+                        "VALUES (:ingredientId, :menuId)";
+
+        String sqlGetAllergyRelations =
+                "SELECT allergyId FROM RecipeAllergies " +
+                        "WHERE recipeId = :recipeId";
+
+        String sqlAllergyRelationsToUpdate =
+                "INSERT INTO MenuAllergies (allergyId, menuId) " +
+                        "VALUES (:allergyId, :menuId)";
+
 
         try{
             Connection con = sql2o.beginTransaction();
@@ -85,10 +102,34 @@ public class MenuRepository implements IMenuRepository{
                     .addParameter("mealTypeId",model.getMealType().getMealTypeId())
                     .executeUpdate().getKey().toString());
             model.getRecipes().forEach(recipe ->
-                    con.createQuery(sqlRelations)
+                    con.createQuery(sqlRecipeRelations)
                             .addParameter("recipeId",recipe.getRecipeId())
                             .addParameter("menuId",id)
                             .executeUpdate());
+            for (Recipe recipe : model.getRecipes()) {
+                ingredientRelations.addAll(
+                    con.createQuery(sqlGetIngredientRelations)
+                        .addParameter("recipeId",recipe.getRecipeId())
+                        .executeAndFetch(Integer.class)
+                );
+                allergyRelations.addAll(
+                    con.createQuery(sqlGetAllergyRelations)
+                        .addParameter("recipeId",recipe.getRecipeId())
+                        .executeAndFetch(Integer.class)
+                );
+            }
+            for(Integer ingredientId : ingredientRelations){
+                con.createQuery(sqlIngredientRelationsToUpdate)
+                        .addParameter("ingredientId",ingredientId)
+                        .addParameter("menuId",id)
+                        .executeUpdate();
+            }
+            for(Integer allergyId : allergyRelations){
+                con.createQuery(sqlIngredientRelationsToUpdate)
+                        .addParameter("allergyId",allergyId)
+                        .addParameter("menuId",id)
+                        .executeUpdate();
+            }
             con.commit();
         }catch (Exception e)
         {
@@ -166,7 +207,8 @@ public class MenuRepository implements IMenuRepository{
     public MealType getMealTypeFor(int id){
         MealType mealType;
         String sql =
-                "SELECT * FROM MealTypes " +
+                "SELECT mealTypeId, mealTypeName " +
+                    "FROM MealTypes " +
                         "WHERE mealTypeId IN (" +
                         "SELECT mealTypeId FROM Menus " +
                         "WHERE menuId = :id" +
@@ -208,10 +250,60 @@ public class MenuRepository implements IMenuRepository{
         return recipes;
     }
 
+    @Override
+    public Collection<Ingredient> getIngredientFor(int id) {
+        Collection<Ingredient> ingredients;
+
+        String sql =
+                "SELECT ingredientId, ingredientName, ingredientDescription " +
+                    "FROM Ingredients " +
+                    "WHERE ingredientId IN (" +
+                        "SELECT ingredientId FROM MeasuredIngredients " +
+                        "WHERE recipeId IN (" +
+                            "SELECT recipeId FROM MenuRecipes " +
+                            "WHERE menuId = :id))";
+
+        try{
+            Connection con = sql2o.open();
+            ingredients = con.createQuery(sql)
+                    .addParameter("id",id)
+                    .executeAndFetch(Ingredient.class);
+        }catch (Exception e)
+        {
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+        return ingredients;
+    }
+
+    @Override
+    public Collection<Allergy> getAllergiesFor(int id) {
+        Collection<Allergy> allergies;
+
+        String sql =
+                "SELECT ingredientId FROM MeasuredIngredients " +
+                        "WHERE recipeId IN (" +
+                        "SELECT recipeId FROM MenuRecipes " +
+                        "WHERE menuId = :id)";
+
+        try{
+            Connection con = sql2o.open();
+            allergies = con.createQuery(sql)
+                    .addParameter("id",id)
+                    .executeAndFetch(Allergy.class);
+        }catch (Exception e)
+        {
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+        return allergies;
+    }
+
     private RecipeType getRecipeType(int recipeId){
         RecipeType recipeType;
         String sql =
-                "SELECT * FROM RecipeTypes " +
+                "SELECT recipeTypeId, recipeTypeName " +
+                    "FROM RecipeTypes " +
                         "WHERE recipeTypeId IN (" +
                         "SELECT recipeTypeId FROM Recipes " +
                         "WHERE recipeTypeId = :id" +

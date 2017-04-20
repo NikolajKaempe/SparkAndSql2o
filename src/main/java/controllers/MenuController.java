@@ -1,6 +1,9 @@
 package controllers;
 
 import models.Menu;
+import models.Recipe;
+import models.wrapper_models.Menus;
+import models.wrapper_models.Recipes;
 import org.sql2o.Sql2o;
 import repositories.MenuRepository;
 import repositories.repositoryInterfaces.IMenuRepository;
@@ -28,7 +31,7 @@ public class MenuController
             Collection<Menu> menus = menuRepository.getAll();
             if (menus.size() != 0){
                 res.status(200);
-                return menus;
+                return new Menus(menus);
             }
             res.status(204);
             return new String("No recipeTypes found in the database");
@@ -52,6 +55,26 @@ public class MenuController
             res.status(204);
             return new String("No menu with id "+ id +" found");
         }, json());
+
+        get("/menus/:id/recipes", (req, res) -> {
+            int id ;
+            try{
+                id = Integer.parseInt(req.params(":id"));
+            }catch (Exception e)
+            {
+                res.status(400);
+                return new String("the id must be an integer");
+            }
+            Collection<Recipe> recipes = menuRepository.getRecipesFor(id);
+
+            if (recipes != null) {
+                res.status(200);
+                return new Recipes(recipes);
+            }
+            res.status(204);
+            return new String("No recipes found for menu with id "+ id);
+        }, json());
+
 
         before((req,res) -> {
             //TODO GET VERIFICATION FOR ADMIN/PUBLISHER

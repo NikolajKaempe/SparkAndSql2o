@@ -1,9 +1,6 @@
 package repositories.repositoryInterfaces;
 
-import models.Ingredient;
-import models.MeasuredIngredient;
-import models.Recipe;
-import models.RecipeType;
+import models.*;
 
 import java.util.Collection;
 
@@ -15,6 +12,8 @@ public interface IRecipeRepository extends IRepository<Recipe>
     RecipeType getRecipeTypeFor(int id);
     Collection<MeasuredIngredient> getMeasuredIngredientsFor(int id);
     Ingredient getIngredientFor(int id);
+    Collection<Allergy> getAllergiesFor(int id);
     void failDeleteIfRelationsExist(int id);
-    boolean isRelationValid(int id);
+    boolean isIngredientValid(int id);
+    boolean isRecipeTypeValid(int recipeTypeId);
 }

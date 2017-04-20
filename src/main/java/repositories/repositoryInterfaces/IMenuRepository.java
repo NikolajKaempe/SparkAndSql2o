@@ -1,8 +1,6 @@
 package repositories.repositoryInterfaces;
 
-import models.MealType;
-import models.Menu;
-import models.Recipe;
+import models.*;
 
 import java.util.Collection;
 
@@ -13,5 +11,7 @@ public interface IMenuRepository extends IRepository<Menu>
 {
     MealType getMealTypeFor(int id);
     Collection<Recipe> getRecipesFor(int id);
+    Collection<Ingredient> getIngredientFor(int id);
+    Collection<Allergy> getAllergiesFor(int id);
     boolean isRelationValid(int id);
 }

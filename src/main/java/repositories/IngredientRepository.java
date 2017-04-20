@@ -9,9 +9,6 @@ import repositories.repositoryInterfaces.IIngredientRepository;
 import java.util.ArrayList;
 import java.util.Collection;
 
-/**
- * Created by Kaempe on 24-02-2017.
- */
 public class IngredientRepository implements IIngredientRepository
 {
     private Sql2o sql2o;
@@ -24,7 +21,8 @@ public class IngredientRepository implements IIngredientRepository
     public Collection<Ingredient> getAll() {
         Collection<Ingredient> ingredients;
         String sql =
-                "SELECT * FROM Ingredients";
+                "SELECT ingredientId, ingredientName, ingredientDescription " +
+                    "FROM Ingredients";
         try{
             Connection con = sql2o.open();
             ingredients = con.createQuery(sql)
@@ -45,7 +43,8 @@ public class IngredientRepository implements IIngredientRepository
         }
         Ingredient ingredient;
         String sql =
-                "SELECT * FROM Ingredients " +
+                "SELECT ingredientId, ingredientName, ingredientDescription " +
+                        "FROM Ingredients " +
                         "WHERE ingredientId = :id";
         try{
             Connection con = sql2o.open();
@@ -217,11 +216,12 @@ public class IngredientRepository implements IIngredientRepository
     {
         Collection<Allergy> allergies;
         String sql =
-                "SELECT * FROM Allergies " +
-                        "WHERE allergyId IN (" +
-                            "SELECT allergyId FROM IngredientAllergies " +
-                            "WHERE ingredientId = :id" +
-                        ")";
+                "SELECT allergyId, allergyName, allergyDescription " +
+                    "FROM Allergies " +
+                    "WHERE allergyId IN (" +
+                        "SELECT allergyId FROM IngredientAllergies " +
+                        "WHERE ingredientId = :id" +
+                    ")";
         try{
             Connection con = sql2o.open();
             allergies = con.createQuery(sql)

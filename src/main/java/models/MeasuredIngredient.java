@@ -12,8 +12,15 @@ public class MeasuredIngredient
 
     public MeasuredIngredient(){}
 
-    public MeasuredIngredient(double amount, String measure, int ingredientId, String ingredientName, String ingredientDescription){
-        this.ingredient = new Ingredient(ingredientId,ingredientName,ingredientDescription);
+    public MeasuredIngredient(double amount, String measure, Ingredient ingredient){
+        this.ingredient = ingredient;
+        this.amount = amount;
+        this.measure = measure;
+    }
+
+    public MeasuredIngredient(int measuredIngredientId, double amount, String measure, Ingredient ingredient){
+        this.measuredIngredientId = measuredIngredientId;
+        this.ingredient = ingredient;
         this.amount = amount;
         this.measure = measure;
     }

@@ -81,7 +81,7 @@ public class AllergyRepository implements IAllergyRepository
         if (!this.exists(model.getAllergyId())){
             throw new IllegalArgumentException("No allergy found with id: " + model.getAllergyId());
         }
-        failIfInvalid(model);
+        this.failIfInvalid(model);
         String sql =
                 "UPDATE Allergies SET " +
                         "allergyName = :allergyName, " +
@@ -134,16 +134,16 @@ public class AllergyRepository implements IAllergyRepository
     }
 
     @Override
-    public void failIfInvalid(Allergy allergy)
+    public void failIfInvalid(Allergy model)
     {
-        if (allergy == null)
+        if (model == null)
         {
             throw new IllegalArgumentException("Allergy cannot be null");
         }
-        if (allergy.getAllergyName() == null || allergy.getAllergyName().length() < 1) {
+        if (model.getAllergyName() == null || model.getAllergyName().length() < 1) {
             throw new IllegalArgumentException("Parameter `name` cannot be empty");
         }
-        if (allergy.getAllergyDescription() == null || allergy.getAllergyDescription().length() < 1) {
+        if (model.getAllergyDescription() == null || model.getAllergyDescription().length() < 1) {
             throw new IllegalArgumentException("Parameter `description` cannot be empty");
         }
     }

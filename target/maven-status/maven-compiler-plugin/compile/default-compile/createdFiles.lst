@@ -8,6 +8,7 @@ repositories\RecipeRepository.class
 controllers\RecipeController.class
 models\wrapper_models\Recipes.class
 repositories\repositoryInterfaces\IRecipeRepository.class
+models\wrapper_models\Menus.class
 models\Ingredient.class
 controllers\RecipeTypeController.class
 Main.class

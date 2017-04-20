@@ -1,15 +1,13 @@
 package repositories;
 
-import models.Ingredient;
-import models.MeasuredIngredient;
-import models.Recipe;
-import models.RecipeType;
+import models.*;
 import org.sql2o.Connection;
 import org.sql2o.Sql2o;
 import repositories.repositoryInterfaces.IRecipeRepository;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 
 /**
  * Created by Kaempe on 20-03-2017.
@@ -69,13 +67,23 @@ public class RecipeRepository implements IRecipeRepository {
     @Override
     public int create(Recipe model) {
         int id;
+        Collection<Integer> allergyRelations = new HashSet<>();
         this.failIfInvalid(model);
         String sql =
                 "INSERT INTO Recipes (recipeName, recipeDescription, recipeImageFilePath, recipeTypeId) " +
                         "VALUES (:recipeName, :recipeDescription, :recipeImageFilePath, :recipeTypeId)";
-        String sqlRelations =
+        String sqlIngredientRelations =
                 "INSERT INTO MeasuredIngredients (recipeId, ingredientId, amount, measure) " +
                         "VALUES (:recipeId, :ingredientId, :amount, :measure)";
+
+        String sqlGetAllergiesForIngredients =
+                "SELECT allergyId FROM IngredientAllergies WHERE " +
+                        "ingredientId = :id";
+
+        String sqlAllergyRelationsToUpdate =
+                "INSERT INTO RecipeAllergies (allergyId, recipeId) " +
+                        "VALUES (:allergyId, :recipeId)";
+
         try{
             Connection con = sql2o.beginTransaction();
             id = Integer.parseInt(con.createQuery(sql, true)
@@ -83,11 +91,22 @@ public class RecipeRepository implements IRecipeRepository {
                     .addParameter("recipeTypeId",model.getRecipeType().getRecipeTypeId())
                     .executeUpdate().getKey().toString());
             model.getMeasuredIngredients().forEach(ingredient ->
-                    con.createQuery(sqlRelations)
+                    con.createQuery(sqlIngredientRelations)
                             .addParameter("recipeId",id)
                             .addParameter("ingredientId",ingredient.getIngredient().getIngredientId())
                             .addParameter("amount",ingredient.getAmount())
                             .addParameter("measure",ingredient.getMeasure())
+                            .executeUpdate());
+            model.getMeasuredIngredients().forEach(ingredient ->
+                    allergyRelations.addAll(
+                            con.createQuery(sqlGetAllergiesForIngredients)
+                                    .addParameter("id",ingredient.getIngredient().getIngredientId())
+                                    .executeAndFetch(Integer.class)
+                    ));
+            allergyRelations.forEach(allergyId ->
+                    con.createQuery(sqlAllergyRelationsToUpdate)
+                            .addParameter("allergyId",allergyId)
+                            .addParameter("recipeId",id)
                             .executeUpdate());
             con.commit();
         }catch (Exception e)
@@ -104,7 +123,9 @@ public class RecipeRepository implements IRecipeRepository {
         if (!this.exists(model.getRecipeId())){
             throw new IllegalArgumentException("No recipe found with id: " + model.getRecipeId());
         }
-        failIfInvalid(model);
+        this.failIfInvalid(model);
+
+        Collection<Integer> allergyRelations = new HashSet<>();
 
         String sql =
                 "UPDATE Recipes SET " +
@@ -117,13 +138,25 @@ public class RecipeRepository implements IRecipeRepository {
                         "recipeTypeId = :recipeTypeId " +
                         "WHERE recipeId = :id";
 
-        String sqlRelationsToDelete =
+        String sqlIngredientRelationsToDelete =
                 "DELETE FROM MeasuredIngredients WHERE " +
                         "recipeId = :id";
 
-        String sqlRelationsToUpdate =
+        String sqlIngredientRelationsToUpdate =
                 "INSERT INTO MeasuredIngredients (recipeId, ingredientId, amount, measure) " +
                         "VALUES (:recipeId, :ingredientId, :amount, :measure )";
+
+        String sqlAllergyRelationsToDelete =
+                "DELETE FROM RecipeAllergies WHERE " +
+                        "recipeId = :id";
+
+        String sqlGetAllergiesForIngredients =
+                "SELECT allergyId FROM IngredientAllergies WHERE " +
+                        "ingredientId = :id";
+
+        String sqlAllergyRelationsToUpdate =
+                "INSERT INTO RecipeAllergies (allergyId, recipeId) " +
+                        "VALUES (:allergyId, :recipeId)";
 
         try{
             Connection con = sql2o.beginTransaction();
@@ -135,16 +168,30 @@ public class RecipeRepository implements IRecipeRepository {
                     .addParameter("recipeTypeId",model.getRecipeType().getRecipeTypeId())
                     .addParameter("id",model.getRecipeId())
                     .executeUpdate();
-            con.createQuery(sqlRelationsToDelete)
+            con.createQuery(sqlIngredientRelationsToDelete)
                     .addParameter("id",model.getRecipeId())
                     .executeUpdate();
             model.getMeasuredIngredients().forEach(ingredient ->
-                    con.createQuery(sqlRelationsToUpdate)
+                    con.createQuery(sqlIngredientRelationsToUpdate)
                             .addParameter("recipeId",model.getRecipeId())
                             .addParameter("ingredientId",ingredient.getIngredient().getIngredientId())
                             .addParameter("amount",ingredient.getAmount())
                             .addParameter("measure",ingredient.getMeasure())
                             .executeUpdate());
+            con.createQuery(sqlAllergyRelationsToDelete)
+                    .addParameter("id",model.getRecipeId())
+                    .executeUpdate();
+            model.getMeasuredIngredients().forEach(ingredient ->
+                    allergyRelations.addAll(
+                        con.createQuery(sqlGetAllergiesForIngredients)
+                            .addParameter("id",ingredient.getIngredient().getIngredientId())
+                            .executeAndFetch(Integer.class)
+                    ));
+            allergyRelations.forEach(allergyId ->
+                con.createQuery(sqlAllergyRelationsToUpdate)
+                    .addParameter("allergyId",allergyId)
+                    .addParameter("recipeId",model.getRecipeId())
+                    .executeUpdate());
             con.commit();
             return true;
         }catch (Exception e)
@@ -159,7 +206,7 @@ public class RecipeRepository implements IRecipeRepository {
         if (!this.exists(id)){
             throw new IllegalArgumentException("No Recipe found with id: " + id);
         }
-        failDeleteIfRelationsExist(id); // TODO create method when menus are introduced
+        failDeleteIfRelationsExist(id);
         Connection con;
         String sqlRelationsToDelete =
                 "DELETE FROM MeasuredIngredients WHERE " +
@@ -207,40 +254,46 @@ public class RecipeRepository implements IRecipeRepository {
     }
 
     @Override
-public void failIfInvalid(Recipe recipe){
-        if ( recipe == null)
+    public void failIfInvalid(Recipe recipe){
+        try{
+            if ( recipe == null)
+            {
+                throw new IllegalArgumentException("recipe cannot be null");
+            }
+            if (recipe.getRecipeName() == null || recipe.getRecipeName().length() < 1) {
+                throw new IllegalArgumentException("Parameter `name` cannot be empty");
+            }
+            if (recipe.getRecipeDescription() == null || recipe.getRecipeDescription().length() < 1) {
+                throw new IllegalArgumentException("Parameter `description` cannot be empty");
+            }
+            if (recipe.getRecipeType() == null ) {
+                throw new IllegalArgumentException("Parameter `recipeType` cannot be null");
+            }
+            if (recipe.getMeasuredIngredients() == null){
+                throw new IllegalArgumentException("Recipe must have at least 1 ingredient!");
+            }
+            if (!this.isRecipeTypeValid(recipe.getRecipeType().getRecipeTypeId()))
+            {
+                throw new IllegalArgumentException("Parameter `recipeType` dos'ent exist");
+            }
+            for (MeasuredIngredient measuredIngredient : recipe.getMeasuredIngredients()){
+                if (measuredIngredient.getAmount() <= 0){
+                    throw new IllegalArgumentException("Parameter `measuredIngredient` amount must be greater than 0");
+                }
+                if (measuredIngredient.getMeasure() == null || measuredIngredient.getMeasure().length() < 1){
+                    throw new IllegalArgumentException("Parameter `measure` cannot be empty");
+                }
+                if (measuredIngredient.getIngredient() == null){
+                    throw new IllegalArgumentException("Parameter `ingredient` cannot be null");
+                }
+                if(!this.isIngredientValid(measuredIngredient.getIngredient().getIngredientId())){
+                    throw new IllegalArgumentException("Ingredient with id " +
+                            measuredIngredient.getIngredient().getIngredientId() + " dos'ent exist");
+                }
+            }
+        }catch (Exception e)
         {
-            throw new IllegalArgumentException("recipe cannot be null");
-        }
-        if (recipe.getRecipeName() == null || recipe.getRecipeName().length() < 1) {
-            throw new IllegalArgumentException("Parameter `name` cannot be empty");
-        }
-        if (recipe.getRecipeDescription() == null || recipe.getRecipeDescription().length() < 1) {
-            throw new IllegalArgumentException("Parameter `description` cannot be empty");
-        }
-        if (recipe.getRecipeType() == null ) {
-            throw new IllegalArgumentException("Parameter `recipeType` cannot be null");
-        }
-        if (recipe.getRecipeType().getRecipeTypeId() == 0) {
-            throw new IllegalArgumentException("Parameter `recipeType` has wrong id");
-        }
-        if (recipe.getMeasuredIngredients() == null){
-            throw new IllegalArgumentException("Recipe must have at least 1 ingredient!");
-        }
-        for (MeasuredIngredient measuredIngredient : recipe.getMeasuredIngredients()){
-            if (measuredIngredient.getAmount() <= 0){
-                throw new IllegalArgumentException("Parameter `measuredIngredient` amount must be greater than 0");
-            }
-            if (measuredIngredient.getMeasure() == null || measuredIngredient.getMeasure().length() < 1){
-                throw new IllegalArgumentException("Parameter `measure` cannot be empty");
-            }
-            if (measuredIngredient.getIngredient() == null){
-                throw new IllegalArgumentException("Parameter `ingredient` cannot be null");
-            }
-            if(!this.isRelationValid(measuredIngredient.getIngredient().getIngredientId())){
-                throw new IllegalArgumentException("Ingredient with id " +
-                        measuredIngredient.getIngredient().getIngredientId() + " dos'ent exist");
-            }
+            throw new IllegalArgumentException(e.getMessage());
         }
     }
 
@@ -248,11 +301,12 @@ public void failIfInvalid(Recipe recipe){
     public RecipeType getRecipeTypeFor(int id){
         RecipeType recipeType;
         String sql =
-                "SELECT * FROM RecipeTypes " +
-                        "WHERE recipeTypeId IN (" +
-                "SELECT recipeTypeId FROM Recipes " +
-                        "WHERE recipeTypeId = :id" +
-                        ")";
+                "SELECT recipeTypeId, recipeTypeName " +
+                    "FROM RecipeTypes " +
+                    "WHERE recipeTypeId IN (" +
+                        "SELECT recipeTypeId FROM Recipes " +
+                        "WHERE recipeId = :id" +
+                    ")";
         try{
             Connection con = sql2o.open();
             recipeType = con.createQuery(sql)
@@ -291,11 +345,12 @@ public void failIfInvalid(Recipe recipe){
     public Ingredient getIngredientFor(int id){
         Ingredient ingredient;
         String sql =
-                "SELECT * FROM Ingredients " +
-                        "WHERE ingredientId IN (" +
+                "SELECT ingredientId, ingredientName, ingredientDescription " +
+                    "FROM Ingredients " +
+                    "WHERE ingredientId IN (" +
                         "SELECT ingredientId FROM MeasuredIngredients " +
                         "WHERE recipeId= :id" +
-                        ")";
+                    ")";
         try{
             Connection con = sql2o.open();
             ingredient = con.createQuery(sql)
@@ -310,7 +365,30 @@ public void failIfInvalid(Recipe recipe){
     }
 
     @Override
-    public boolean isRelationValid(int relationId){
+    public Collection<Allergy> getAllergiesFor(int id){
+        Collection<Allergy> allergies;
+        String sql =
+                "SELECT allergyId, allergyName, allergyDescription " +
+                    "FROM Allergies " +
+                    "WHERE allergyId in (" +
+                        "SELECT allergyId from RecipeAllergies WHERE " +
+                        "recipeId = :id" +
+                    ")";
+        try{
+            Connection con = sql2o.open();
+            allergies = con.createQuery(sql)
+                    .addParameter("id",id)
+                    .executeAndFetch(Allergy.class);
+        }catch (Exception e)
+        {
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+        return allergies;
+    }
+
+    @Override
+    public boolean isIngredientValid(int relationId){
         int id;
         String sql =
                 "SELECT ingredientId FROM Ingredients " +
@@ -319,6 +397,25 @@ public void failIfInvalid(Recipe recipe){
             Connection con = sql2o.open();
             id = con.createQuery(sql)
                     .addParameter("id",relationId)
+                    .executeAndFetchFirst(Integer.class);
+            if (id > 0) return true;
+            return false;
+        }catch (Exception e)
+        {
+            return false;
+        }
+    }
+
+    @Override
+    public boolean isRecipeTypeValid(int recipeTypeId){
+        int id;
+        String sql =
+                "SELECT recipeTypeId FROM RecipeTypes " +
+                        "WHERE recipeTypeId = :id";
+        try{
+            Connection con = sql2o.open();
+            id = con.createQuery(sql)
+                    .addParameter("id",recipeTypeId)
                     .executeAndFetchFirst(Integer.class);
             if (id > 0) return true;
             return false;
